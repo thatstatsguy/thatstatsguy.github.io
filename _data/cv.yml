@@ -35,8 +35,9 @@
     - title: Software Developer
       institution: Dynamo Analytics
       year: 2020 - Present
-      description: 
-        - Primary role is to developing software solutions for Psicle, a process automation software. 
-        - .Net Stack (F#, C#, Powershell) for development
-        - Azure experience for deployments and cloud development
-        
+      description:
+        - Working across several teams to meet deliverable requirements for our product, Psicle.
+        - Developing, deploying and testing software deployed to Azure.
+        - Improving code quality through implementation of unit tests, build pipelines and regression testing through the TDD framework. 
+        - Maintaining technical and client-facing documentation
+        - Primarily working in .Net Stack (F#, C#, Blazor, Powershell) for development
