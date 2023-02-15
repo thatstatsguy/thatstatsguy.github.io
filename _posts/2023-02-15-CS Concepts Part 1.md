@@ -4,7 +4,7 @@ title:  CS Concepts (Part 1)
 date:   2023-02-15
 description: We all have to start somewhere
 tags: Concepts
-categories: sample-posts
+categories: Concepts
 ---
 Hi there and welcome to my first blog post. In this blog post we're starting a journey to re-explore CS concepts. Having worked in a functional language (F#) for almost three years, it's easy to forget some specifiecs OOP principles. 
 
