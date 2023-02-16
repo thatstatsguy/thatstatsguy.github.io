@@ -2,11 +2,11 @@
 layout: post
 title:  CS Concepts (Part 1)
 date:   2023-02-15
-description: We all have to start somewhere
+description: OOP Basics
 tags: Concepts
 categories: Concepts
 ---
-Hi there and welcome to my first blog post. In this blog post we're starting a journey to re-explore CS concepts. Having worked in a functional language (F#) for almost three years, it's easy to forget some specifiecs OOP principles. 
+Hi there and welcome to my first blog post. In this blog post we're starting a journey to re-explore CS concepts as a way for me to refresh my memory! Having worked in a functional language (F#) for almost three years, it's easy to forget some specific OOP principles. 
 
 In this series I'm hitting the refresh button, to re-learn things I've forgotten and keep my mind sharp. I learn best when I'm explaining something to others, so if you're reading this I hope you find some value here! 
 
@@ -31,12 +31,12 @@ public class Person
     public string Surname;
 }
 ```
-If you're anything like me when I started programming, I would have got caught up qith questions like
+If you're anything like me when I started programming, I would have got caught up with questions like
 > what the heck is the word public doing there
 
 and not got much further. Try ignore that for now for this discussion. It's important, but not important for you to understand classes.
 
-Objects are examples of a class (commonly referred to as instances) - if the goal of the class was to theoretically represent a person then an instance of a class (an obejct) would be a `Person` object with `Name = Chris` and `Surname = Dunderdale`.
+Objects are examples of a class (commonly referred to as instances) - if the goal of the class was to theoretically represent a person then an instance of a class (an object) would be a `Person` object with `Name = Chris` and `Surname = Dunderdale`.
 
 <hr>
 
@@ -61,9 +61,9 @@ public class Person
 }
 ```
 
-Now admitedly this constructor isn't doing much, it takes in two parameters (name and surname) and assigns it to `Name` and `Surname`. By definining the constructor in this way it allows us to do all sorts of things like checks before the value is assigned. 
+Now admittedly this constructor isn't doing much, it takes in two parameters (name and surname) and assigns it to `Name` and `Surname`. Defining a constructor in this way allows us to do all sorts of things like checks before the value is assigned. 
 
-For example, if we included an additional property cellphone number, we would be able to use our constructor to validate that number given to us is indeed valid.
+For example, if we included an additional property cell phone number, we would be able to use our constructor to validate that number given to us is indeed valid.
 
 Going back to the original objective, creating instances of a class, we can now use the constructor to create two new objects.
 
@@ -95,7 +95,7 @@ public class Snack : Food
     public bool ContainsNuts;
 }
 ```
-notice the lack of duplication. When being used in code, every snack will still have the Name and Calories properties available (assuming they've got the public meethod - more on this in the next point)
+notice the lack of duplication. When being used in code, every snack will still have the Name and Calories properties available (assuming they've got the public method - more on this in the next point)
 
 <hr>
 
