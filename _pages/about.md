@@ -15,4 +15,6 @@ selected_papers: false # includes a list of papers marked as "selected={true}"
 social: true  # includes social icons at the bottom of the page
 ---
 
-Hi 👋 I'm Chris. This site is a collectin of information about my work, my ideas and the journey to being a better software engineer. When not in front of a keyboard, you can find me on a wine farm or up in the mountains.
+Hi 👋 I'm Chris. This site is a collection of information about my work, my ideas and the journey to being a better software engineer. When not in front of a keyboard, you can find me on a wine farm or up in the mountains.
+
+My goal for 2023 is to write a lot of (hopefully) usefully tech content on my [blog](https://thatstatsguy.github.io/blog/). Feel free to take a look while you're here!
