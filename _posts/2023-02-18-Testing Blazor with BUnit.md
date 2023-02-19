@@ -1,8 +1,8 @@
 ---
 layout: post
 title:  Testing Blazor with bUnit
-date:   2023-02-15
-description: In this article we look at ways in which we can test
+date:   2023-02-19
+description: A quick tour of testing Blazor components with bUnit.
 tags: til
 categories: Testing
 ---
