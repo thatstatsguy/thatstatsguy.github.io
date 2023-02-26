@@ -15,7 +15,7 @@ For anyone who's written production grade code, it's a no brainer that testing y
     - Injecting dependencies and parameters into components
 
 ## Setting up a test project in Blazor
-I'll be walking through the creation of a new project and adding new tests throughout the article - you can follow along and create the project from scratch or get the final project here. To do this tutorial you'll need the following installed:
+I'll be walking through the creation of a new project and adding new tests throughout the article - you can follow along and create the project from scratch or get the final project [here](https://github.com/thatstatsguy/til/tree/main/Testing%20Blazor%20with%20bUnit). To do this tutorial you'll need the following installed:
     - The latest dotnet sdk
     - An IDE, such as VSCode.
 
