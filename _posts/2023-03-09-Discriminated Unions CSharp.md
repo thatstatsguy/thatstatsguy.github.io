@@ -143,6 +143,6 @@ In the first method, we're doing the same check that we did in F# - check the co
 What the `DU` style functionality of `OneOf` enables us is to wrap the objects into a "group". Where this starts to get really cool is where you want to produce different behaviour based on the processed type. In `LogOrder` we change up the behaviour of the logging based on type of object we're dealing with using the `switch` command. What might not be apparent is that we're actually forced to supply an implementation for all cases of the OneOf class.
 
 ## Conclusion
-This has really been a whirlwind tour of what `OneOf` can offer. I didn't even get a chance to mention was how you could use this to effectively get rid of nullables in your code and represent them as an option in the `OneOf` class - hooray for no more null pointer exceptions! There's a really great video on this which I can strongly recommend. https://www.youtube.com/watch?v=7z-xjijYfcI
+This has really been a whirlwind tour of what `OneOf` can offer. I didn't even get a chance to mention was how you could use this to effectively get rid of nullables in your code and represent them as an option in the `OneOf` class - hooray for no more null pointer exceptions! There's a really great video on this which I can strongly recommend. https://www.youtube.com/watch?v=7z-xjijYfcI. The code discussed in this example can be found [here](https://github.com/thatstatsguy/til/tree/main/OneOf).
 
 Until next time :) 
