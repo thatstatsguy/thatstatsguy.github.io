@@ -60,7 +60,7 @@ This is the most generic relationship - in essence this defines a one to many re
 > For example Managers and Employees, multiple employees may be associated with a single manager and a single employee may be associated with multiple managers.
 
 The idea here is that an many objects of type A may be associated to a single object of type B and vice versa. In UML diagrams, this is noted by an arrow.
-{% include figure.html path="assets/img/umlarrow.jpg" class="img-fluid rounded z-depth-1" %}
+{% include figure.html path="assets/img/umlarrow.png" class="img-fluid rounded z-depth-1" %}
 
 **Aggregation**
 We narrow down the association into a specific sub type called composition where one object is comprised of several other objects.
@@ -68,7 +68,7 @@ We narrow down the association into a specific sub type called composition where
 > For example, departments and employees, a department has many employees but a single employee is not associated with multiple departments.
 
 It's clear here that for a given object A will contain a collection of Object B. In UML modelling this is noted with a "white diamond".
-{% include figure.html path="assets/img/UMLWhiteDiamond.jpg" class="img-fluid rounded z-depth-1" %}
+{% include figure.html path="assets/img/UMLWhiteDiamond.png" class="img-fluid rounded z-depth-1" %}
 
 
 **Composition**
@@ -78,7 +78,7 @@ We take Aggregation even further with Composition and specify that an object can
 > For example, the company and company location, a single company has multiple locations. If we delete the company then all the company locations are automatically deleted. The company location does not have their independent life cycle, it depends on the company object's life (parent object).
 
 In UML modelling, this would be represented with a black diamond.
-{% include figure.html path="assets/img/UMLBlackDiamond.jpg" class="img-fluid rounded z-depth-1" %}
+{% include figure.html path="assets/img/UMLBlackDiamond.png" class="img-fluid rounded z-depth-1" %}
 
 **Further Reading**
 - [Source 1](https://www.c-sharpcorner.com/UploadFile/ff2f08/association-aggregation-and-composition/#:~:text=Aggregation%20is%20a%20weak%20Association.%20Composition%20is%20a,is%20a%20requirement%20in%20both%20Composition%20and%20Aggregation.)
