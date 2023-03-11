@@ -311,7 +311,7 @@ public class Computer {
 }
 ```
 **Further Reading**
-[text](https://stackoverflow.com/questions/36162714/what-is-the-difference-between-is-a-relationship-and-has-a-relationship-in#:~:text=An%20IS-A%20relationship%20is%20inheritance.%20The%20classes%20which,child%20class%20is%20a%20type%20of%20parent%20class.)
+- [Source 1](https://stackoverflow.com/questions/36162714/what-is-the-difference-between-is-a-relationship-and-has-a-relationship-in#:~:text=An%20IS-A%20relationship%20is%20inheritance.%20The%20classes%20which,child%20class%20is%20a%20type%20of%20parent%20class.)
 <hr>
 
 ### Wrapping up
