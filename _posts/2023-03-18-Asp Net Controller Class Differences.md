@@ -158,6 +158,6 @@ module SpecialWeatherForecastControllerShould =
 Really nothing special to see here, create a new instance of the type, fire up the method you want to test and check the results.
 
 ### Wrapping up
-Hopefully this will be valuable information for anyone who's doing the some work in F# ASP.NET web APIs. Knowing myself, I'll be using this as a personal cheat sheet at some point in the future. The code for the examples above can be found here. 
+Hopefully this will be valuable information for anyone who's doing the some work in F# ASP.NET web APIs. Knowing myself, I'll be using this as a personal cheat sheet at some point in the future. The code for the examples above can be found [here](https://github.com/thatstatsguy/til/tree/main/ASP%20Net%20Controllers%20and%20F%23%20Web%20APIs). 
 
 Until next time :) 
