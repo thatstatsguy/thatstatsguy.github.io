@@ -14,6 +14,7 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 - [How async really works](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/)
 - [F# vs C# and when to use each](https://www.youtube.com/watch?v=vOcTPUiBQgc)
 - [Planet geek](https://www.planetgeek.ch/)
+- [Learn More Seek More](https://www.learmoreseekmore.com/)
 # Azure
 - [Los Techies](https://lostechies.com/)
 
