@@ -21,4 +21,4 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 # Patterns
 - [A Journey in CQRS](https://learn.microsoft.com/en-us/previous-versions/msp-n-p/jj554200(v=pandp.10))
 - [Hub and Spoke Pattern in Blazor](https://www.youtube.com/watch?v=SxfUHLAfC8k) - corresponding [repo](https://github.com/jeffreypalermo/blazormvc)
-
+- [Mediator Pattern](https://dotnetcoretutorials.com/2019/04/30/the-mediator-pattern-in-net-core-part-1-whats-a-mediator/)
