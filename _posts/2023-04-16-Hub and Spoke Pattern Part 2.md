@@ -6,12 +6,12 @@ description: A "roll your own" implementation
 tags: Blazor C#
 categories: Patterns
 ---
-Hi and welcome back to this series of articles where I'm exploring the Hub and Spoke pattern. In this series of articles, I'm exploring the hub and spoke architecture by building an exchange rate application which receives real time notifications via a rest API. In the previous article we set up the API that would receive requests. It's now time to set up something that can receive real time notifications and send it on to all components listening for update events.
+Hi and welcome back to this series of articles where I'm exploring the Hub and Spoke pattern. We're building an exchange rate application which receives real time notifications via a rest API. In the previous article we set up the API that would receive requests. Next is setting up something that can receive real time notifications and send it on to all components listening for update events.
 
 ## The event handler
-In this example I'm taking the example provided [here](https://github.com/jeffreypalermo/blazormvc) and stripping it down to it's most basic parts. The idea here is to register a service in which "interested" components can register their interest for a given event. In our example, the end goal is to set up exchange rate Razor components which will register themselves in order to listen for events.
+I'm taking the example provided [here](https://github.com/jeffreypalermo/blazormvc) and stripping it down to it's most basic parts. The idea is to register a service in which "interested" components can register themselves for a given event.
 
-First off we're defining an interface which the service will use. The interface will define functionality that components can use to register themselves and other components (like the API controller) can use to fire off notification events.
+First off we're defining an interface which the service will use to notify listeners and receive events.
 
 ```
 public interface IUiBus
@@ -32,7 +32,7 @@ public interface IUiBusEvent
 }
 ```
 
-This is a peculiar implementation detail from the original implementation which I quite like. Essentially, it forces the developer to mark the notification "payload" type as some information related to a UI Event. In a sense this is a clever way of self documentation as well as preventing random parts of the application sending through pointless notifications that would otherwise never be used.
+This is a peculiar implementation detail from the original implementation which I find interesting. Essentially, it forces the developer to mark the notification "payload" type as information related to a UI Event. It's an interesting way of self documentation as well as preventing random parts of the application sending through pointless notifications that would otherwise never be used.
 
 Similar to the `IUiBus` interface, we need to define an interface that all interested parties will implement in order to handle events.
 
@@ -96,7 +96,7 @@ public class VisualsUpdateBus : IUiBus
 }
 ```
 
-As you'll see above, the register event takes an input object instance which implements the IListener interface and adds it into the `_listeners` hash set. When the notify method is received, all object instances implementing the given type have the `Handle` method called to notify them of the event.
+As seen above, the register event takes an object instance which implements the IListener interface and adds it into the `_listeners` hash set. When the notify method is received, all object instances implementing the given type have the `Handle` method are called to notify them of the event.
 
 Registering our new service can be done using `builder.Services.AddSingleton<IUiBus, VisualsUpdateBus>();` in the `Program.cs` file.
 
@@ -147,10 +147,10 @@ The price update razor component is nothing particularly exciting, it takes as i
 ```
 Notice that the given razor component implements the `IListener<PriceUpdate>` interface along with the associated `Handle` method. When notification events are fired off, the `Handle` method is called. If the "To" and "From" currencies match up, the component will update the exchange rate.
 
-Additionally, also note that the `IUiBus` is implemented so that the component can register itself to receive notifications from the service. This is done in the `OnAfterRenderAsync` method. Make sure not to do this in `OnInitialised` as the method may be called more than once during the component lifecycle leading to your component being registered twice by accident.
+Also note that the `IUiBus` is implemented so that the component can register itself to receive notifications from the service. This is done in the `OnAfterRenderAsync` method. Make sure not to do this in `OnInitialised` as the method may be called more than once during the component lifecycle leading to your component being registered twice by accident.
 
 ## Firing Notification Events from the Controller
-Since our UI eventing service is registered via the IOC container, it can be injected into the controller via dependency injection. Below is a snippet of the updated Controller code which fires off a notification event when the update action is called.
+Since our UI eventing service is registered via the IOC container, it can be injected into the API controller via dependency injection. Below is a snippet of the updated Controller code which fires off a notification event when a request is received.
 
 ```
 [ApiController]
@@ -203,13 +203,13 @@ Doing this you should now see that the application has been refreshed **only** o
 
 ## Comments
 All code for this article is available on my [github repo](https://github.com/thatstatsguy/DesignPatterns/tree/main/Hub%20and%20Spoke/Part2/CurrencyDisplay). Based on the implementation provided, I have three comments:
-1. I've said this before, but I do find it interesting that  [this](https://github.com/jeffreypalermo/blazormvc) implementation stops random events being fired off by forcing the notification payload to implement a given interface. That being said, it can be confusing to a new user on a repo when they see a record implenting an empty interface.
+1. I've said this before, but I do find it interesting that  [this](https://github.com/jeffreypalermo/blazormvc) implementation stops random events being fired off by forcing the notification payload to implement a given interface. That being said, it can be confusing to a new user on a repo when they see a record implementing an empty interface.
 2. It's great to have such fine grained control over whether or not a component registers itself by forcing it to manually call  the `Register` method on the `VisualUiBus` service. However, I can see someone may want an implementation detail where everything is automatically registered without calling the `Register` event. 
     - I can't remember where I've seen this, but this can be done by inheriting from a base class which takes care of the registration and all you need to do is override the Handle method for the custom implementation details. 
     - Other options may exist other than the one I've found.
 3. I'm definitely not the first person who's had to deal with real time notifications and eventing via a pattern like this - something like the MediatR library likely has a spin off for this in Blazor.
 
 ## Wrapping up
-We now have a working implementation for an application that receives real time notifications. In the final article of the series, we'll explore how we can use already existing libraries to achieve the same implementation. 
+We now have a working application that receives real time notifications. In the final article of the series, we'll explore how we can use already existing libraries to achieve the same implementation. 
 
 Until next time :) 
