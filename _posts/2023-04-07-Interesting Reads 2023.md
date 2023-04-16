@@ -22,3 +22,10 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 - [A Journey in CQRS](https://learn.microsoft.com/en-us/previous-versions/msp-n-p/jj554200(v=pandp.10))
 - [Hub and Spoke Pattern in Blazor](https://www.youtube.com/watch?v=SxfUHLAfC8k) - corresponding [repo](https://github.com/jeffreypalermo/blazormvc)
 - [Mediator Pattern](https://dotnetcoretutorials.com/2019/04/30/the-mediator-pattern-in-net-core-part-1-whats-a-mediator/)
+
+# Wireframing
+- [DropDowns in Figma](https://www.youtube.com/watch?v=5YEw7O1KgNQ&t=364s)
+
+# Trends
+- [InfoQ Software Trends](https://www.infoq.com/articles/infoq-software-trends-report-2022/?itm_source=articles_about_InfoQ-trends-report&itm_medium=link&itm_campaign=InfoQ-trends-report)
+- [InfoQ Architecture Trends](https://www.infoq.com/articles/architecture-trends-2023/?itm_source=articles_about_InfoQ-trends-report&itm_medium=link&itm_campaign=InfoQ-trends-report)
