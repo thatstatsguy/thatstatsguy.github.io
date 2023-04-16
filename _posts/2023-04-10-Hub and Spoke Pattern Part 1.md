@@ -17,7 +17,7 @@ The Hub and Spoke pattern (as defined [here](https://www.oreilly.com/library/vie
 In our application, we've got one or more clients connected to the blazor server. Our exchange rate's job is to "listen" to external price update events coming in an update the visuals accordingly. The process of listening for external price update events is where we'll implement the hub and spoke pattern. First, we need to set up a web api which can receive price update requests.
 
 ## Setting up a RESTful API Service
-Before reacting to incoming events we first need something listening for incoming requests. All code for this article can be found [here](https://github.com/thatstatsguy/DesignPatterns/tree/main/Hub%20and%20Spoke%20Pattern/Part1).
+Before reacting to incoming events we first need something listening for incoming requests. All code for this article can be found [here](https://github.com/thatstatsguy/DesignPatterns/tree/main/Hub%20and%20Spoke/Part1/CurrencyDisplay).
 
 Starting off, let's bootstrap a blazor server application with `dotnet new blazorserver -o CurrencyDisplay`.
 
@@ -74,4 +74,4 @@ Making a request to the endpoint should return `TODO` as a result.
 If you're not in the mood to use Postman, you can always use Swagger to achieve this - I've gone ahead and put in the required code in the `Program.cs` file along with the required imports - have a look at the code in my repo if you want to do this. You can access the swagger UI at `https://localhost:7177/swagger/index.html`
 
 ## Wrapping up
-We've added in a rest API - next step is to set up our exchange rate display and make it react to external events. See you at the next article :)
+We've added in a RESTful API. In the next article, we'll set up our exchange rate display and make it react to external events. See you at the [next article](https://thatstatsguy.github.io/blog/2023/Hub-and-Spoke-Pattern-Part-2/) :)
