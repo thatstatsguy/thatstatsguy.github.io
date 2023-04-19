@@ -29,3 +29,6 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 # Trends
 - [InfoQ Software Trends](https://www.infoq.com/articles/infoq-software-trends-report-2022/?itm_source=articles_about_InfoQ-trends-report&itm_medium=link&itm_campaign=InfoQ-trends-report)
 - [InfoQ Architecture Trends](https://www.infoq.com/articles/architecture-trends-2023/?itm_source=articles_about_InfoQ-trends-report&itm_medium=link&itm_campaign=InfoQ-trends-report)
+
+# HTML 
+- [Pattern matching](https://www.w3.org/TR/CSS2/selector.html#pattern-matching)
