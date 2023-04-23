@@ -15,6 +15,11 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 - [F# vs C# and when to use each](https://www.youtube.com/watch?v=vOcTPUiBQgc)
 - [Planet geek](https://www.planetgeek.ch/)
 - [Learn More Seek More](https://www.learmoreseekmore.com/)
+- [Progam Intialisation in AspNetCore](https://stackoverflow.com/questions/39047229/application-startup-code-in-asp-net-core)
+
+# Visualisation
+- [Visualizing Serilogs](https://stackoverflow.com/questions/52472089/can-i-use-some-viewer-to-review-and-search-for-serilog-logging-files)
+
 # Azure
 - [Los Techies](https://lostechies.com/)
 
