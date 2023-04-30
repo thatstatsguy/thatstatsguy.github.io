@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  Integrating Fluent Validation into Blazor
-date:   2023-04-31
+date:   2023-04-30
 description: Fluent Validation > Data Annotations
 tags: Validation til
 categories: Blazor
