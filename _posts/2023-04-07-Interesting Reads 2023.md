@@ -22,6 +22,7 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 
 # Azure
 - [Los Techies](https://lostechies.com/)
+- [Setting up GRPC without certs for testing](https://github.com/Azure/app-service-linux-docs/blob/master/HowTo/gRPC/use_gRPC_with_dotnet.md)
 
 # Patterns
 - [A Journey in CQRS](https://learn.microsoft.com/en-us/previous-versions/msp-n-p/jj554200(v=pandp.10))
