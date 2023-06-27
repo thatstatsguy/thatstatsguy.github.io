@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  Health Checks in C#
+title:  Value objects
 date:   2023-06-26
 description: 
 tags: C# til PrimitiveObsession ValueObjects
