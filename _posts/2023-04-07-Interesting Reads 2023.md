@@ -40,3 +40,6 @@ If you ordered HackerNews off of Wish, this is probably what you'd get. This is 
 
 # HTML 
 - [Pattern matching](https://www.w3.org/TR/CSS2/selector.html#pattern-matching)
+
+# API Design
+- [ByteByteGo Newsletter](https://blog.bytebytego.com/p/api-design?utm_source=share&utm_medium=android)
