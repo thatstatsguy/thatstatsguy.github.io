@@ -65,3 +65,6 @@ Until next time :)
 ## Further Resources
 - [Nick Chapsas Video on Result Types](https://www.youtube.com/watch?v=YbuSuSpzee4)
 - [Milan Jovanović](https://www.youtube.com/watch?v=P5CRea21R2E)
+
+## Additional Notes
+- This article was inspired by the videos mentioned in the additional resources. A sprinkling of Chat GPT was used here an there to spice things up ;)
