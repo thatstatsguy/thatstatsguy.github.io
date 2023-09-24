@@ -56,18 +56,8 @@
       institution: Dynamo Analytics
       year: Jan 2020 - Dec 2020
       description:
-        Tech Stack: Microsoft Azure, F#, XUnit, Zendesk, Antlr, Jira, DotTrace, DotMemory
-        Responsibilities:
-        - Maintaining and Improving PsiCode, a custom programming language within the Psicle Platform.
-        - Providing end-user support for users of the Psicle Platform on Zendesk.
-        - Profiling and benchmarking performance "hot paths" in Psicle and implementing appropriate algorithms to improve performance.
-
-    - title: Junior Software Engineer
-      institution: Dynamo Analytics
-      year: Jan 2020 - Dec 2020
-      description:
-        **Tech Stack:** Microsoft Azure, F#, XUnit, Zendesk, Antlr, Jira, DotTrace, DotMemory
-        **Responsibilities:**
+        **Tech Stack** Microsoft Azure, F#, XUnit, Zendesk, Antlr, Jira, DotTrace, DotMemory
+        **Responsibilities**
         - Maintaining and Improving PsiCode, a custom programming language within the Psicle Platform.
         - Providing end-user support for users of the Psicle Platform on Zendesk.
         - Profiling and benchmarking performance "hot paths" in Psicle and implementing appropriate algorithms to improve performance.
