@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  Async Await in C# (Part 1)
-date:   2023-09-25
+date:   2023-09-24
 description: 
 tags: C# til async
 categories: C#
