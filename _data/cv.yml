@@ -34,15 +34,39 @@
   contents:
     - title: Intermediate Software Developer
       institution: Dynamo Analytics
-      year: 2020 - Present
+      year: July 2023 - Present
       description:
-        - Working across several teams to meet deliverable requirements for our product, Psicle.
-        - Developing, deploying and testing software deployed to Azure.
-        - Improving code quality through implementation of unit tests, build pipelines and regression testing through the TDD framework. 
-        - Maintaining technical and client-facing documentation
-        - Primarily working in .Net Stack (F#, C#, Blazor, Powershell) for development
+        - title: Tech Stack
+          contents:
+            - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, gRPC, DevExpress, Zendesk, Dapper, Moq, AutoFixture
+            
+        - title: Responsibilities
+          contents:
+            -	Maintenance and improvement of Psicle, the flagship product at Dynamo Analytics.
+            -	Building out Psicle Web, a SaaS offering of our desktop product.
+            -	Writing technical documentation for developers as well as client facing documentation.
+            -	Maintenance and improvement of several internal company websites and systems.
+            -	Mentoring other software developers on software development best practices.
+
     
-    - title: Junior Software Developer
+    - title: Software Engineer
+      institution: Dynamo Analytics
+      year: Jan 2021 – July 2023
+      description:
+        - title: Tech Stack
+          contents:
+            - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, DevExpress, Zendesk, Antlr
+            
+        - title: Responsibilities
+          contents:
+            -	Maintenance and improvement of Psicle, the flagship product of Dynamo Analytics.
+            -	Building deployment pipelines and QA checks within Azure Devops.
+            -	Development of Actuarial Modelling Plugins within the Psicle Platform.
+            -	Building systems which automatically integrate with Zendesk.
+            -	Liaising with end users to provide bespoke solutions to various business needs.
+
+
+    - title: Junior Software Engineer
       institution: Dynamo Analytics
       year: Jan 2020 – Dec 2020
       description:
