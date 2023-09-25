@@ -32,14 +32,37 @@
 - title: Experience
   type: time_table
   contents:
-    - title: Intermediate Software Developer
+    - title: Intermediate Software Engineer
       institution: Dynamo Analytics
       year: July 2023 - Present
       description:
         - title: Tech Stack
           contents:
             - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, gRPC, DevExpress, Zendesk, Dapper, Moq, AutoFixture
-        
+            
+        - title: Responsibilities
+          contents:
+            - Maintenance and improvement of Psicle, the flagship product at Dynamo Analytics.
+            - Building out Psicle Web, a SaaS offering of Psicle desktop product.
+            - Writing technical documentation for developers as well as client facing documentation.
+            - Maintenance and improvement of several internal company websites and systems.
+            - Mentoring other software developers on software development best practices.
+    
+    - title: Software Engineer
+      institution: Dynamo Analytics
+      year: Jan 2021 - July 2023
+      description:
+        - title: Tech Stack
+          contents:
+            - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, DevExpress, Zendesk, Antlr
+            
+        - title: Responsibilities
+          contents:
+            - Maintenance and improvement of Psicle, the flagship product of Dynamo Analytics.
+            - Building deployment pipelines and QA checks within Azure Devops.
+            - Development of Actuarial Modelling Plugins within the Psicle Platform.
+            - Building systems which automatically integrate with Zendesk.
+            - Liaising with end users to provide bespoke solutions to various business needs.
 
     - title: Junior Software Engineer
       institution: Dynamo Analytics
