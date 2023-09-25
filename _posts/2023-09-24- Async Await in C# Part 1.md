@@ -11,9 +11,9 @@ I recently worked through two resources for asynchronous programming in C# that 
 
 In this two part series I'll try my best to show how you can avoid causing needless drama for yourself with asynchronous programming. Code for this can be found at the link below.
 
-<a class="btn btn-dark" href="https://github.com/thatstatsguy/til/tree/main/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a>
+<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a>
 
-<a class="btn btn-dark" href="https://github.com/thatstatsguy/til/tree/main/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a>
+<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a>
 
 ## Some notes before we start
 The content for this series was derived, in part, from the following [youtube](https://www.youtube.com/watch?v=n6kiJKr4_oA) video and [pluralsight](https://app.pluralsight.com/library/courses/getting-started-with-asynchronous-programming-dotnet/learning-check) course. The ideas presented are similar, but I've condensed these down into a smaller application which is hopefully easier to follow.
