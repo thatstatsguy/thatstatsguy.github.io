@@ -55,7 +55,7 @@
       description:
         - title: Tech Stack
           contents:
-            - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, DevExpress, Zendesk, Antlr
+            - Microsoft Azure, Azure DevOps, C#, F#, Blazor, XUnit, DevExpress, Zendesk, Antlr, MudBlazor, AgGrid
             
         - title: Responsibilities
           contents:
