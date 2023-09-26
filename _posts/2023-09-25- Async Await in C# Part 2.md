@@ -9,9 +9,9 @@ categories: C#
 
 If you haven't already done so, give the [first article](https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/) in the series some love. Part 1 covers the various reasons we want to do async programming in the first place, things to look out for. In this article, we'll take a look at ways you can cause havoc by using the async programming model incorrectly and a few other interesting observations. Link to all code is available via the buttons below.
 
-<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a>
+<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a>
 
-<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a>
+<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a>
 
 ## Lets get ready to break some programs
 Instead of telling you what not to do, let's see what happens when you use the async programming model incorrectly. First off, download the sample blazor project and boot it up with 

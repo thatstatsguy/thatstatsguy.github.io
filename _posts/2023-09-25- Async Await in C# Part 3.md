@@ -1,0 +1,152 @@
+---
+layout: post
+title:  Async Await in C# (Part 3)
+date:   2023-09-25
+description: 
+tags: C# til async
+categories: C#
+---
+
+If you haven't already done so, give the first two articles in the series some love. [Part 1](https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/) covers the various reasons we want to do async programming in the first place, things to look out for. [Part 2](https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/) details some fun ways you can muck up your code if you don't use Async properly. 
+
+In this article, we'll take a look what benchmarks have to say about async code in various scenarios. Link to all code is available via the buttons below.
+
+<a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/BenchmarkAsync" role="button">Link to Benchmark Project</a>
+
+## The profiling scenario
+The code we're going to be testing is variations on `Thread.Sleep(100);`. Based on what I understand of Async programming, the `async` keyword initiates the creation of a state machine. This handles the problems associated with returning the context to the calling thread since all code below the `await` keyword is handled internal as if it was written in a continuation. 
+
+The creation of the state machine of course isn't free. Jumping between threads a.k.a context switching has an associated cost. The resources I've come across suggests that to use Async efficiently you 
+- shouldn't use async programming unless it's not needed
+- avoid using the `await` keyword multiple times in a row (more on this in a bit)
+- opt for awaiting as late as possible in the code and rather returning Tasks
+- avoid returning context back to the calling thread unless there's actually code to run after the await (particularly applicable to libraries)
+
+## Let's walk through the test scenarios
+
+If you want to start running the tests, feel free to start now with the following code.
+```
+dotnet restore
+dotnet run --configuration Release
+```
+
+The first example is the synchronous method version of `Thread.Sleep()`
+
+```
+public void BaselineSleep()
+{
+    Thread.Sleep(100);    
+}
+```
+
+I expect this to be the fastest as it makes no use of any asynchronous tools at our disposal.
+
+Next thing we want to test is what happens when we make our method asynchronous.
+```
+[Benchmark]
+public async Task SleepAsync()
+{
+    await Task.Run(() => Thread.Sleep(100));
+}
+
+[Benchmark]
+public async Task NestedAwaitsSleep()
+{
+    await Task.Run(async () => await Task.Delay(100));
+}
+```
+These methods do the same thing, however what I'm interesting in is knowing whether the async call has any impact on the overall runtime.
+
+Next up, I'm interested in knowing what kind of impact not switching back to the calling thread has on performance. The code below uses `ConfigureAwait(false)` to stop the thread context being switched back to the calling thread when it's finished.
+
+```
+[Benchmark]
+public async Task DefaultDontSwitchBackToCallingThread()
+{
+    await Task.Run(() => Thread.Sleep(100)).ConfigureAwait(false);
+}
+```
+
+The last thing I'm interested in is the cost associated with multiple awaits and if any efficiencies can be gained by using the built in methods like `Task.WhenAll`.
+
+```
+[Benchmark]
+public async Task BrokenUpSleepTasks()
+{
+    //effectively waiting 100ms
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+}
+
+[Benchmark]
+public async Task MultipleSleepTasksWithWhenAllWithoutConfigureAwait()
+{
+    //ten different tasks
+    await Task.WhenAll(
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100))
+        .ConfigureAwait(false);
+}
+[Benchmark]
+public async Task MultipleTasksWithWhenAllWithConfigureAwait()
+{
+    //ten different tasks
+    await Task.WhenAll(
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100))
+        .ConfigureAwait(false);
+}
+```
+
+The smart folks over at google have written a [post about this](https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/october/asynchronous-programming-async-performance-understanding-the-costs-of-async-and-await) and avoiding additional `await` calls can make your code more performant. 
+
+## The results
+The results for the tests as generated by Benchmark.Net can be found in the table below.
+
+| Method                                             | Mean     | Error   | StdDev  |
+|--------------------------------------------------- |---------:|--------:|--------:|
+| BaselineSleep                                      | 108.2 ms | 0.46 ms | 0.43 ms |
+| SleepAsync                                         | 108.6 ms | 0.49 ms | 0.46 ms |
+| NestedAwaitsSleep                                  | 108.4 ms | 0.49 ms | 0.46 ms |
+| DefaultDontSwitchBackToCallingThread               | 108.4 ms | 0.42 ms | 0.37 ms |
+| BrokenUpSleepTasks                                 | 156.5 ms | 1.06 ms | 1.00 ms |
+| MultipleSleepTasksWithWhenAllWithoutConfigureAwait | 108.5 ms | 0.51 ms | 0.48 ms |
+| MultipleTasksWithWhenAllWithConfigureAwait         | 108.5 ms | 0.57 ms | 0.53 ms |
+
+First off, the asynchronous method is (as expected) the fastest method. Not using the nuts and bolts associated with async programming is marginally faster. Next up is the first two async methods. To be honest I expected a larger impact when using async and await. The `NestedAwaitsSleep` method is also quite interesting as the "inner" await seemed to have no impact and the code ran faster (???). 
+
+Looking at the broken sleep tasks method, there's almost a 50% increase in the amount of time taken to perform the tasks. What I find very interesting is the power of `Task.WhenAll`. For the low low price of 0.1ms compared to normal async methods you can spin up several threads to do a lot of work that would otherwise take a second or more.
+
+The above results are interesting - at the outset, I thought that the additional `await` usage in my methods would make a large impact. The reality (based on these results) is that one additional `await` may not make a difference but several of them can rack up some cost. Similarly, I assumed that `ConfigureAwait` would have a larger impact. It's possible that my tests just suck and I need to think of something a bit more complex than `Thread.Sleep`.
+
+## Conclusion 
+The results in the above table showcase how playing around with your async code can have tangible impact on the performance of your code. Give it a bash in your own code. If you figure out where I'm going wrong in my tests feel free to log an issue on my github repo!
+
+## Additional Resources
+Resources on performance when using async programming
+- https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/october/asynchronous-programming-async-performance-understanding-the-costs-of-async-and-await
+- https://devblogs.microsoft.com/premier-developer/the-performance-characteristics-of-async-methods/
