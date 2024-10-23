@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://thatstatsguy.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://thatstatsguy.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2024-10-23T21:18:05+00:00</updated><id>https://thatstatsguy.github.io/feed.xml</id><title type="html">blank</title><entry><title type="html">Packaging Files When Publishing Nuget Packages</title><link href="https://thatstatsguy.github.io/blog/2024/packaging-files-when-publishing-nuget-packages/" rel="alternate" type="text/html" title="Packaging Files When Publishing Nuget Packages"/><published>2024-10-23T21:09:14+00:00</published><updated>2024-10-23T21:09:14+00:00</updated><id>https://thatstatsguy.github.io/blog/2024/packaging-files-when-publishing-nuget-packages</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2024/packaging-files-when-publishing-nuget-packages/"><![CDATA[]]></content><author><name></name></author></entry><entry><title type="html">Performing End to End Testing in Blazor with Playwright</title><link href="https://thatstatsguy.github.io/blog/2024/performing-end-to-end-testing-in-blazor-with-playwright/" rel="alternate" type="text/html" title="Performing End to End Testing in Blazor with Playwright"/><published>2024-04-06T10:58:47+00:00</published><updated>2024-04-06T10:58:47+00:00</updated><id>https://thatstatsguy.github.io/blog/2024/performing-end-to-end-testing-in-blazor-with-playwright</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2024/performing-end-to-end-testing-in-blazor-with-playwright/"><![CDATA[]]></content><author><name></name></author></entry><entry><title type="html">Transient Fault Handling with Polly</title><link href="https://thatstatsguy.github.io/blog/2023/Polly/" rel="alternate" type="text/html" title="Transient Fault Handling with Polly"/><published>2023-09-26T00:00:00+00:00</published><updated>2023-09-26T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Polly</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Polly/"><![CDATA[<p>When developing an application, there’s many things that can go wrong in your code. One of the problems you need to deal with is when an external system is sensitive to overload or can drop off unexpectedly. These “problems” can be broadly classified under the banner of transient faults. Polly is a library you can use to assist with developing applications which rely on external systems. Link to all code is available via the buttons below.</p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/PollyWalkthrough" role="button">Link to Polly Project</a></p> <h2 id="dealing-with-transient-faults-without-polly">Dealing with Transient Faults without Polly</h2> <p>Suppose that we’re developing a program which relies on an external system which is unreliable. How would you go about doing a “roll your own” implementation? In the example you’ll see an example where we create our own implementation when connecting to the bored api client.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>app.MapGet("/custom", async ([FromServices] IHttpClientFactory clientFactory) =&gt;
+{
+    var client = clientFactory.CreateClient("boredapi");
+    var retryCount = 0;
+    Start:
+    try
+    {
+        var response = await client.GetAsync("activity");
+        if (response.StatusCode is &gt;= HttpStatusCode.InternalServerError or HttpStatusCode.RequestTimeout)
+        {
+            //i.e. we're dealing with a transient error
+            if (retryCount&gt;=5)
+            {
+                return Results.BadRequest("Server Error - Too many retries attempted.");
+            }
+            retryCount++;
+            goto Start;    
+        }
+
+        return Results.Ok(await response.Content.ReadAsStringAsync());
+
+    }
+    catch (HttpRequestException)
+    {
+        if (retryCount&gt;=5)
+        {
+            return Results.BadRequest("Server Error - Too many retries attempted.");
+        }
+        retryCount++;
+        goto Start;
+    }
+
+    return Results.BadRequest("This is awkward");
+});
+</code></pre></div></div> <p>Off the bat - this code isn’t great. In general <code class="language-plaintext highlighter-rouge">goto</code> statements are considered an anti-pattern - with your code jumping all over the place it’s difficult to debug amongst other problems. Secondly, having your own bespoke retry functionality can get quite messy as the problem scope becomes more complex. Let’s take a look at what Polly offers.</p> <h2 id="retries-with-polly">Retries with Polly</h2> <p>Polly uses something called policies which define how your application should behave under various circumstances. In this example we’d like to try the api endpoint 5 times before giving up.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private static readonly IAsyncPolicy&lt;HttpResponseMessage&gt; _retryPolicy =
+    Policy&lt;HttpResponseMessage&gt;
+        .Handle&lt;HttpRequestException&gt;()
+        .OrResult(response =&gt;
+            response.StatusCode is &gt;= HttpStatusCode.InternalServerError or HttpStatusCode.RequestTimeout)
+        //retry up to 5 times
+        .RetryAsync(5);
+
+public static WebApplication AddRetryEndpoints(this WebApplication app)
+{
+    app.MapGet("/Retry", async ([FromServices] IHttpClientFactory clientFactory) =&gt;
+    {
+        var client = clientFactory.CreateClient("boredapi");
+        var response = 
+            await _retryPolicy
+                .ExecuteAsync(() =&gt; client.GetAsync("activity"));
+        return response.Content.ReadAsStringAsync();
+
+    });
+        
+    return app;
+}
+</code></pre></div></div> <p>In the above code we can handle specific exceptions that you can specify or specific results. What’s great about this is how you can go about defining a retry policy once and in theory reuse it for several scenarios if needed.</p> <h2 id="caching-with-polly">Caching with Polly</h2> <p>Similarly, if you have a scenario in which caching results from previous requests is fine within some bounded time frame, Polly can assist with the implementation.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MemoryCache memoryCache = new MemoryCache(new MemoryCacheOptions());
+MemoryCacheProvider memoryCacheProvider = new MemoryCacheProvider(memoryCache);
+var cachePolicy = Policy.CacheAsync(memoryCacheProvider, TimeSpan.FromMinutes(1));
+
+
+app.MapGet("/Caching", async ([FromServices] IHttpClientFactory clientFactory) =&gt;
+{
+    var getResult = async () =&gt;
+    {
+        var client = clientFactory.CreateClient("boredapi");
+        
+        var result =  await client.GetAsync("activity");
+        return await result.Content.ReadAsStringAsync();
+    };
+    var result = await cachePolicy.ExecuteAsync(context =&gt; getResult() , new Context("FooKey") );
+    return Results.Ok(result);
+});
+</code></pre></div></div> <p>In the above code an InMemory cache is created which is valid for one minute. Hitting this endpoint twice in a minute will result in a previously retrieved result being returned. What I find particularly cool about this is that you’re not limited to in memory cache’s. Other caching mechanisms like Redis or even SQL server can be used.</p> <h2 id="conclusion">Conclusion</h2> <p>The above code is really just a sample of what can be achieved with Polly. Other problems you might want to solve with Polly include</p> <ul> <li>rate limiting for incoming requests</li> <li>exponential backoffs (with and without Jitter) when the system you’re trying to communicate with isn’t responding.</li> </ul> <p>The Polly library is really great since it allows you to standardize how you interact with various systems and how you respond to incoming requests on your system. It protects both the systems you use as well as your own system.</p> <h2 id="additional-resources">Additional Resources</h2> <ul> <li>https://www.youtube.com/watch?v=nJH0PC2Pubs</li> </ul>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="til"/><category term="FaultHandling"/><summary type="html"><![CDATA[Polly want a cracker?]]></summary></entry><entry><title type="html">Hot reloading dockerized .Net applications</title><link href="https://thatstatsguy.github.io/blog/2023/Hot-reloading-a-.Net-Application-in-Docker/" rel="alternate" type="text/html" title="Hot reloading dockerized .Net applications"/><published>2023-09-26T00:00:00+00:00</published><updated>2023-09-26T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Hot%20reloading%20a%20.Net%20Application%20in%20Docker</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Hot-reloading-a-.Net-Application-in-Docker/"><![CDATA[<p>When developing a .Net application which is containerized using <code class="language-plaintext highlighter-rouge">docker</code> and <code class="language-plaintext highlighter-rouge">docker compose</code> it can be a real pain to constantly rebuild your docker image each and every time you make a tweak to your code. In the past I’ve used Nodemon to “hot reload” functionality as I’ve played around on Javascript which automatically built in the new code changes each time I hit save. In today’s article we’ll see how we can achieve the same thing in dotnet. Link to all code is available via the buttons below.</p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Docker%20hot%20reload" role="button">Link to Hot Reload Example</a></p> <h2 id="getting-started">Getting started</h2> <p>To begin with I’ve created a sample web api application using <code class="language-plaintext highlighter-rouge">dotnet new webapi</code>. The only adjustments I’ve made is adding a route to the index of my api using <code class="language-plaintext highlighter-rouge">app.MapGet("/", () =&gt; "Hello World");</code>. As a test I want my application to hot reload each time I change the return text.</p> <h2 id="using-dotnet-watch-in-docker">Using dotnet watch in docker</h2> <p>Ignoring the dockerization aspect of this article, dotnet actually has a built in hot reload feature in the form of <code class="language-plaintext highlighter-rouge">dotnet watch</code>. You could run this in the root of the application and start making changes to files. What we need to do is bake this functionality into docker to supercharge our dev experience.</p> <p>To begin with, what we need to do is create a dockerfile which can be used to create an image. Using the Microsoft base image for the dotnet 7 sdk, we can achieve this with</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>FROM mcr.microsoft.com/dotnet/sdk:7.0
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+COPY . /app
+RUN dotnet restore
+
+ENTRYPOINT [ "dotnet", "watch", "run", "--urls", "http://*:8080" ]
+</code></pre></div></div> <p>If you’ve ever worked with docker the first few lines should be fairly straight forward. We are:</p> <ul> <li>setting the baseline image,</li> <li>setting the working directory,</li> <li>exposing ports for incoming traffic,</li> <li>copying contents from the build folder into the app folder in the container and we’re building from</li> <li>doing a dotnet restore</li> </ul> <p>The first interesting bit pops up when specifying the entrypoint which specifies we should be using <code class="language-plaintext highlighter-rouge">dotnet watch run</code> when starting up the container. This means that dotnet is actively looking for file changes in the <code class="language-plaintext highlighter-rouge">app</code> directory which will trigger the reload.</p> <p>Noticed that we’ve not specified any volumes here? This is where docker compose comes in to play.</p> <h2 id="using-docker-compose-to-wrap-things-up">Using docker compose to wrap things up</h2> <p>Mounting a volume to the container enables us to be able to update the app directly from outside the container. We’ll set this up using docker compose but you could do this without it as well if you needed to. The docker compose is pretty concise.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>services:
+  hotreloadexample:
+    image: hotreloadexample
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    volumes:
+      - .:/app
+
+</code></pre></div></div> <p>The docker compose file does all the normal things you expect of it, specifying the build context and docker file as well as mapping ports. The last section on volumes is of interest as we see it maps the current build directory to the app folder in the container. This means that we should be able to update logic as needed and things will update on the fly.</p> <h2 id="testing-out-our-changes">Testing out our changes</h2> <p>To test this out, we need to boot up the system with <code class="language-plaintext highlighter-rouge">docker compose up</code>. In the terminal you should see something like <code class="language-plaintext highlighter-rouge">dotnet watch ⌚ Polling file watcher is enabled</code> which indicates dotnet is actively watching the files in the app directory.</p> <p>Navigating to <code class="language-plaintext highlighter-rouge">http://localhost:8080/</code> you’ll see the <code class="language-plaintext highlighter-rouge">Hello World</code> as expected. Opening up your IDE, if you change <code class="language-plaintext highlighter-rouge">app.MapGet("/", () =&gt; "Hello World");</code> to something else like <code class="language-plaintext highlighter-rouge">app.MapGet("/", () =&gt; "Testing");</code> and hit save the hot reload should being automatically. You should see that your application is rebuilding and will start serving the new response assuming that you’ve not made a mistake.</p> <p>Navigating to the same url again, you’ll notice that the message has indeed changed after the rebuild. Great success!</p> <h2 id="conclusion">Conclusion</h2> <p>The above code is a quick and easy way to supercharge your development experience in docker. This is especially the case if you rely on using docker compose to boot up several services for your system.</p> <p>Until next time :)</p>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="docker"/><summary type="html"><![CDATA[Supercharging your development]]></summary></entry><entry><title type="html">Async Await in C# (Part 2)</title><link href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-2/" rel="alternate" type="text/html" title="Async Await in C# (Part 2)"/><published>2023-09-25T00:00:00+00:00</published><updated>2023-09-25T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Async%20Await%20in%20C#%20Part%202</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-2/"><![CDATA[<p>If you haven’t already done so, give the <a href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/">first article</a> in the series some love. Part 1 covers the various reasons we want to do async programming in the first place, things to look out for. In this article, we’ll take a look at ways you can cause havoc by using the async programming model incorrectly and a few other interesting observations. Link to all code is available via the buttons below.</p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a></p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a></p> <h2 id="lets-get-ready-to-break-some-programs">Lets get ready to break some programs</h2> <p>Instead of telling you what not to do, let’s see what happens when you use the async programming model incorrectly. First off, download the sample blazor project and boot it up with</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet restore
+dotnet run
+</code></pre></div></div> <p>The application is the template blazor server project with several buttons on it showcasing various aspects of the async programming model. It aint a looker but it works.</p> <figure> <picture> <source class="responsive-img-srcset" media="(max-width: 480px)" srcset="/assets/img/asyncwalkthrough-480.webp"/> <source class="responsive-img-srcset" media="(max-width: 800px)" srcset="/assets/img/asyncwalkthrough-800.webp"/> <source class="responsive-img-srcset" media="(max-width: 1400px)" srcset="/assets/img/asyncwalkthrough-1400.webp"/> <img src="/assets/img/asyncwalkthrough.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"/> </picture> </figure> <h2 id="how-to-freeze-your-application">How to freeze your application</h2> <p>First up is what happens when you do something that clogs up the main application or UI thread. For this example suppose you want to display a custom message on the screen after two seconds. This will will be triggered by clicking <code class="language-plaintext highlighter-rouge">Example 1</code>.</p> <p>While this is happening you also want to be able to set this message to something random by clicking the <code class="language-plaintext highlighter-rouge">Set to a random message</code> button. Running the application, if you click on <code class="language-plaintext highlighter-rouge">Example 1</code> and then quickly click <code class="language-plaintext highlighter-rouge">Set to a random message</code> you’ll notice the application seems to do nothing at all.</p> <p>Digging into the code you’ll notice a <code class="language-plaintext highlighter-rouge">DoSomething</code> method that’s triggered.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private void DoSomething()
+{
+    //simulates a heavy computation
+    Thread.Sleep(5000);
+    _message = "Look what you did!";
+    StateHasChanged();
+    
+}
+</code></pre></div></div> <p>Here we’re sleeping the main thread by calling <code class="language-plaintext highlighter-rouge">Thread.Sleep</code>. By sleeping the main thread it doesn’t matter how many times you click the other button it won’t do anything until the 5 seconds has elapsed.</p> <h2 id="how-to-unfreeze-the-application">How to unfreeze the application</h2> <p>Notice in the previous code we’ve not touched anything related to tasks or the async programming model. What we want to do is get this work happening on a different thread. To to this, we could change up our code as follows.</p> <p>Firstly, we need to tweak our <code class="language-plaintext highlighter-rouge">DoSomething</code> code as follows.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private void DoSomething()
+{
+    //simulates a heavy computation
+    Thread.Sleep(5000);
+    _message = "Look what you did!";
+    InvokeAsync(StateHasChanged);
+    
+}
+</code></pre></div></div> <p>and the calling code will change as follows.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private async Task Example1()
+{
+    await Task.Run(DoSomething);
+}
+</code></pre></div></div> <p>Don’t worry too much about the <code class="language-plaintext highlighter-rouge">InvokeAsync</code> bit for now, we’ll cover that next.</p> <h2 id="how-to-make-your-application-swallow-exceptions">How to make your application swallow exceptions</h2> <p>Using Tasks incorrectly can result in the application not behaving as expected as well as exceptions which are swallowed. A good example of this is shown in Example 2 where I’ve tried to change something on the main thread from a non-ui thread. The <code class="language-plaintext highlighter-rouge">DoSomething</code> method is wrapped in a <code class="language-plaintext highlighter-rouge">Task.Run</code> i.e.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private void Example2()
+{
+    Task.Run(DoSomething);
+}
+</code></pre></div></div> <p>and that’s it. Running the application in debug you’ll notice that an exception is thrown <code class="language-plaintext highlighter-rouge">System.InvalidOperationException: The current thread is not associated with the Dispatcher.</code> but the application doesn’t crash and it also doesn’t update the message on the UI.</p> <p>The reason for this that <code class="language-plaintext highlighter-rouge">Task</code> (at least to my understanding) works more like a class where all exceptions are captured as internal variables. Without using await, these exceptions aren’t checked for in the calling code so you won’t see these exceptions unless you explicitly check for them - possible to do, but very tedious.</p> <p>Back to the code, you’ll notice this is exactly the same scenario we had previously. The exception is telling us that we’re trying to manipulate the main thread from a thread that’s not allowed to. Luckily, Blazor has baked in methods which enable you to do this from other threads so the <code class="language-plaintext highlighter-rouge">InvokeAsync method is used</code></p> <h2 id="how-to-make-your-application-crash-with-literally-no-warning">How to make your application crash with literally no warning</h2> <p>You’ll notice that the async programming model is built with <code class="language-plaintext highlighter-rouge">async</code> <code class="language-plaintext highlighter-rouge">await</code> AND <code class="language-plaintext highlighter-rouge">Task</code>. There’s a good reason for this and the moment you start using things on their own things can and will go wrong.</p> <p>Take for example <code class="language-plaintext highlighter-rouge">Example 8</code> using the async keyword without the Task.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private async void DoSomething8()
+{
+    var t = Task.Run(() =&gt; Thread.Sleep(2000));
+    var c = t.ContinueWith(_ =&gt;
+    {
+        return "Test!";
+    });
+    var result = await c;
+    _message = result;
+    throw new Exception("Things go boom");
+}
+</code></pre></div></div> <p>The calling code looks pretty normal i.e.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private void Example8()
+{
+    try
+    {
+        DoSomething8();
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);   
+    }
+    
+}
+</code></pre></div></div> <p>At a quick glance you’d be forgiven for thinking that the exception is going to be caught in the <code class="language-plaintext highlighter-rouge">try catch</code> block. Unfortunately, since the <code class="language-plaintext highlighter-rouge">await</code> keyword isn’t used, the application has no way of knowing it should hang around and check for an exception. The code then “carries on” and two seconds later the application will crash with no warning whatsoever.</p> <p>In general it’s advised to avoid <code class="language-plaintext highlighter-rouge">async void</code> wherever possible because the <code class="language-plaintext highlighter-rouge">async</code> mechanism is designed to avoid funnies like this. As noted in the youtube video and from personal experience this isn’t always possible since button on click handlers are sometimes expected to have the <code class="language-plaintext highlighter-rouge">async void</code> return type.</p> <h2 id="conclusion">Conclusion</h2> <p>In a classic “Do as I say, don’t do as I do” we’ve shown three different ways you might want to be careful when using the async programming model. In the next article we’ll take a look at how you can improve the speed of your application by better understanding the cost of switching between threads.</p>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="til"/><category term="async"/><summary type="html"><![CDATA[If you haven’t already done so, give the first article in the series some love. Part 1 covers the various reasons we want to do async programming in the first place, things to look out for. In this article, we’ll take a look at ways you can cause havoc by using the async programming model incorrectly and a few other interesting observations. Link to all code is available via the buttons below.]]></summary></entry><entry><title type="html">Async Await in C# (Part 3)</title><link href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-3/" rel="alternate" type="text/html" title="Async Await in C# (Part 3)"/><published>2023-09-25T00:00:00+00:00</published><updated>2023-09-25T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Async%20Await%20in%20C#%20Part%203</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-3/"><![CDATA[<p>If you haven’t already done so, give the first two articles in the series some love. <a href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/">Part 1</a> covers the various reasons we want to do async programming in the first place, things to look out for. <a href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/">Part 2</a> details some fun ways you can muck up your code if you don’t use Async properly.</p> <p>In this article, we’ll take a look what benchmarks have to say about async code in various scenarios. Link to all code is available via the buttons below.</p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/BenchmarkAsync" role="button">Link to Benchmark Project</a></p> <h2 id="the-profiling-scenario">The profiling scenario</h2> <p>The code we’re going to be testing is variations on <code class="language-plaintext highlighter-rouge">Thread.Sleep(100);</code>. Based on what I understand of Async programming, the <code class="language-plaintext highlighter-rouge">async</code> keyword initiates the creation of a state machine. This handles the problems associated with returning the context to the calling thread since all code below the <code class="language-plaintext highlighter-rouge">await</code> keyword is handled internal as if it was written in a continuation.</p> <p>The creation of the state machine of course isn’t free. Jumping between threads a.k.a context switching has an associated cost. The resources I’ve come across suggests that to use Async efficiently you</p> <ul> <li>shouldn’t use async programming unless it’s not needed</li> <li>avoid using the <code class="language-plaintext highlighter-rouge">await</code> keyword multiple times in a row (more on this in a bit)</li> <li>opt for awaiting as late as possible in the code and rather returning Tasks</li> <li>avoid returning context back to the calling thread unless there’s actually code to run after the await (particularly applicable to libraries)</li> </ul> <h2 id="lets-walk-through-the-test-scenarios">Let’s walk through the test scenarios</h2> <p>If you want to start running the tests, feel free to start now with the following code.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet restore
+dotnet run --configuration Release
+</code></pre></div></div> <p>The first example is the synchronous method version of <code class="language-plaintext highlighter-rouge">Thread.Sleep()</code></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public void BaselineSleep()
+{
+    Thread.Sleep(100);    
+}
+</code></pre></div></div> <p>I expect this to be the fastest as it makes no use of any asynchronous tools at our disposal.</p> <p>Next thing we want to test is what happens when we make our method asynchronous.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Benchmark]
+public async Task SleepAsync()
+{
+    await Task.Run(() =&gt; Thread.Sleep(100));
+}
+
+[Benchmark]
+public async Task NestedAwaitsSleep()
+{
+    await Task.Run(async () =&gt; await Task.Delay(100));
+}
+</code></pre></div></div> <p>These methods do the same thing, however what I’m interesting in is knowing whether the async call has any impact on the overall runtime.</p> <p>Next up, I’m interested in knowing what kind of impact not switching back to the calling thread has on performance. The code below uses <code class="language-plaintext highlighter-rouge">ConfigureAwait(false)</code> to stop the thread context being switched back to the calling thread when it’s finished.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Benchmark]
+public async Task DefaultDontSwitchBackToCallingThread()
+{
+    await Task.Run(() =&gt; Thread.Sleep(100)).ConfigureAwait(false);
+}
+</code></pre></div></div> <p>The last thing I’m interested in is the cost associated with multiple awaits and if any efficiencies can be gained by using the built in methods like <code class="language-plaintext highlighter-rouge">Task.WhenAll</code>.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Benchmark]
+public async Task BrokenUpSleepTasks()
+{
+    //effectively waiting 100ms
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+    await Task.Delay(10);
+}
+
+[Benchmark]
+public async Task MultipleSleepTasksWithWhenAllWithoutConfigureAwait()
+{
+    //ten different tasks
+    await Task.WhenAll(
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100))
+        .ConfigureAwait(false);
+}
+[Benchmark]
+public async Task MultipleTasksWithWhenAllWithConfigureAwait()
+{
+    //ten different tasks
+    await Task.WhenAll(
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100), 
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100),
+            Task.Delay(100))
+        .ConfigureAwait(false);
+}
+</code></pre></div></div> <p>The smart folks over at google have written a <a href="https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/october/asynchronous-programming-async-performance-understanding-the-costs-of-async-and-await">post about this</a> and avoiding additional <code class="language-plaintext highlighter-rouge">await</code> calls can make your code more performant.</p> <h2 id="the-results">The results</h2> <p>The results for the tests as generated by Benchmark.Net can be found in the table below.</p> <table> <thead> <tr> <th>Method</th> <th style="text-align: right">Mean</th> </tr> </thead> <tbody> <tr> <td>BaselineSleep</td> <td style="text-align: right">108.2 ms</td> </tr> <tr> <td>SleepAsync</td> <td style="text-align: right">108.6 ms</td> </tr> <tr> <td>NestedAwaitsSleep</td> <td style="text-align: right">108.4 ms</td> </tr> <tr> <td>DefaultDontSwitchBackToCallingThread</td> <td style="text-align: right">108.4 ms</td> </tr> <tr> <td>BrokenUpSleepTasks</td> <td style="text-align: right">156.5 ms</td> </tr> <tr> <td>MultipleSleepTasksWithWhenAllWithoutConfigureAwait</td> <td style="text-align: right">108.5 ms</td> </tr> <tr> <td>MultipleTasksWithWhenAllWithConfigureAwait</td> <td style="text-align: right">108.5 ms</td> </tr> </tbody> </table> <p></p> <p>First off, the asynchronous method is (as expected) the fastest method. Not using the nuts and bolts associated with async programming is marginally faster. Next up is the first two async methods. To be honest I expected a larger impact when using async and await. The <code class="language-plaintext highlighter-rouge">NestedAwaitsSleep</code> method is also quite interesting as the “inner” await seemed to have no impact and the code ran faster (???).</p> <p>Looking at the broken sleep tasks method, there’s almost a 50% increase in the amount of time taken to perform the tasks. What I find very interesting is the power of <code class="language-plaintext highlighter-rouge">Task.WhenAll</code>. For the low low price of 0.1ms compared to normal async methods you can spin up several threads to do a lot of work that would otherwise take a second or more.</p> <p>The above results are interesting - at the outset, I thought that the additional <code class="language-plaintext highlighter-rouge">await</code> usage in my methods would make a large impact. The reality (based on these results) is that one additional <code class="language-plaintext highlighter-rouge">await</code> may not make a difference but several of them can rack up some cost. Similarly, I assumed that <code class="language-plaintext highlighter-rouge">ConfigureAwait</code> would have a larger impact. It’s possible that my tests just suck and I need to think of something a bit more complex than <code class="language-plaintext highlighter-rouge">Thread.Sleep</code>.</p> <h2 id="conclusion">Conclusion</h2> <p>The results in the above table showcase how playing around with your async code can have tangible impact on the performance of your code. Give it a bash in your own code. If you figure out where I’m going wrong in my tests feel free to log an issue on my github repo!</p> <h2 id="additional-resources">Additional Resources</h2> <p>Resources on performance when using async programming</p> <ul> <li>https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/october/asynchronous-programming-async-performance-understanding-the-costs-of-async-and-await</li> <li>https://devblogs.microsoft.com/premier-developer/the-performance-characteristics-of-async-methods/</li> </ul>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="til"/><category term="async"/><summary type="html"><![CDATA[If you haven’t already done so, give the first two articles in the series some love. Part 1 covers the various reasons we want to do async programming in the first place, things to look out for. Part 2 details some fun ways you can muck up your code if you don’t use Async properly.]]></summary></entry><entry><title type="html">Async Await in C# (Part 1)</title><link href="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/" rel="alternate" type="text/html" title="Async Await in C# (Part 1)"/><published>2023-09-24T00:00:00+00:00</published><updated>2023-09-24T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Async%20Await%20in%20C#%20Part%201</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Async-Await-in-C-Part-1/"><![CDATA[<p>I recently worked through two resources for asynchronous programming in C# that I thought worth writing about here. For anyone who’s ever started out with asynchronous programming, it can sometimes feel like you just keep throwing the Task, async await keywords into your code like some kind of magic spice until things start working. No judgement - we’ve all been there.</p> <p>In this three part series we’ll explore various interest points in the async programming model. Code for this can be found at the link below.</p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/AsyncAwaitWalkThrough" role="button">Link to Code (Sample project 1)</a></p> <p><a class="btn btn-info" href="https://github.com/thatstatsguy/til/tree/main/Async%20Programming%20in%20C%23/Task%20Parallel%20Library/TPL" role="button">Link to Code (Sample project 2)</a></p> <h2 id="some-notes-before-we-start">Some notes before we start</h2> <p>The content for this series was derived, in part, from the following <a href="https://www.youtube.com/watch?v=n6kiJKr4_oA">youtube</a> video and <a href="https://app.pluralsight.com/library/courses/getting-started-with-asynchronous-programming-dotnet/learning-check">pluralsight</a> course. The ideas presented are similar, but I’ve condensed these down into a smaller application which is hopefully easier to follow.</p> <h2 id="asynchronous-programming-in-c---the-problem">Asynchronous programming in C# - the problem</h2> <p>Oftentimes, we find ourselves developing applications with front ends that are expected to remain responsive even when there’s heavy computation happening in the background. Asynchronous programming is a method by which we go from blocking the main thread to non blocking by avoiding heavy lifting on the main thread.</p> <p>Why is blocking the main thread of an application a bad idea you might ask? When you block an application’s main thread you may run into:</p> <ul> <li>an unresponsive UI</li> <li>the application no longer being able to process other requests</li> </ul> <h2 id="task-in-the-net-ecosystem">Task in the .Net ecosystem</h2> <p>Tasks enable a lot of the asynchronous programming we’ll discuss in this series. Before going any further, it’s worth noting that asynchronous programming is not the same as parallel programming.</p> <p>Writing code for the parallel library entails writing code which the computer will compute as fast as fast as possible. There’s no concern for whether this activity will block a thread.</p> <p>Async programming in C# also enables the user to compute things in parallel, but the devil is in the details as to how all of this goes down behind the scenes.</p> <ul> <li>Async programming allows you can access a result as things are done</li> <li>work is distributed to a different thread. i.e. don’t block current thread</li> <li>In the event no threads are available, .net puts these Tasks on a queue and takes care of it for you and computes it when it’s ready.</li> </ul> <p>It’s also worth noting that using the asynchronous programming model enables threads to be reused while they are waiting for results. This is known as returning the thread to the thread pool.</p> <h2 id="why-not-just-use-taskrun-and-taskresult">Why not just use Task.Run() and Task.Result?</h2> <p>Relying on <code class="language-plaintext highlighter-rouge">Task.Run</code> and <code class="language-plaintext highlighter-rouge">Task.Result</code> can cause many headaches. For one, if you use <code class="language-plaintext highlighter-rouge">Task.Run</code> you’re only able to process as many requests as your PC has threads and you’ll run out of threads quickly.</p> <p>Another problem with this approach is how to know when the Task is finished? Using <code class="language-plaintext highlighter-rouge">Task.Result</code> is a gamble you take as you have to be very certain your task is finished otherwise you risk some fun exceptions popping out to greet you.</p> <h1 id="async-await">Async await</h1> <p>Before <code class="language-plaintext highlighter-rouge">async</code> and <code class="language-plaintext highlighter-rouge">await</code> keywords were a thing, one would write tasks with continuations i.e. define task A, use the <code class="language-plaintext highlighter-rouge">.ContinueWith</code> method to “chain” together various tasks. An example of this can be seen in example 4 in the first project sample.</p> <p>Without <code class="language-plaintext highlighter-rouge">async</code> and <code class="language-plaintext highlighter-rouge">await</code> you need to constantly be thinking about:</p> <ul> <li>How to deal with exceptions if and when they occur</li> <li>code readability . Writing code with continuations just feels more messy compared to <code class="language-plaintext highlighter-rouge">async</code> and <code class="language-plaintext highlighter-rouge">await</code> which we’ll look at.</li> <li>You need to be very aware of the thread you’re working on. You’ll be painfully aware of this when you try rendering UI changes from the non UI thread and receive an exception complaining about trying to execute code on the dispatcher (i.e. UI) thread.</li> </ul> <p>The keywords hide a lot of complexity as the <code class="language-plaintext highlighter-rouge">await</code> keyword does all the continuations for you. The benefit of this “magic” is improved code readability. The <code class="language-plaintext highlighter-rouge">await</code> keyword also returns back to the original context when done i.e. if we’re creating a task from UI thread we’ll return back to ui thread.</p> <p>Another benefit of the <code class="language-plaintext highlighter-rouge">async</code> <code class="language-plaintext highlighter-rouge">await</code> keywords is that they validates success/failure of task i.e. you’ll see the exceptions and be forced to deal with them instead of them being “swallowed” which we’ll see shortly.</p> <h2 id="conclusion">Conclusion</h2> <p>In the next article we’ll take a look at practical example of how you can use asynchronous programming (both the right way and the wrong way)</p>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="til"/><category term="async"/><summary type="html"><![CDATA[I recently worked through two resources for asynchronous programming in C# that I thought worth writing about here. For anyone who’s ever started out with asynchronous programming, it can sometimes feel like you just keep throwing the Task, async await keywords into your code like some kind of magic spice until things start working. No judgement - we’ve all been there.]]></summary></entry><entry><title type="html">Value objects</title><link href="https://thatstatsguy.github.io/blog/2023/Value-Objects-and-Primitive-Obsession/" rel="alternate" type="text/html" title="Value objects"/><published>2023-06-26T00:00:00+00:00</published><updated>2023-06-26T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Value%20Objects%20and%20Primitive%20Obsession</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Value-Objects-and-Primitive-Obsession/"><![CDATA[<p>In software development, it all to easy to fall into the trap of a phenomenon called “primitive obsession”. The term refers to a coding anti-pattern where we as developers lean too heavily on primitive data types throughout our code base. For those not familiar, examples of primitives include integers, strings, or booleans. This can leading to various issues such as lack of clarity, reduced maintainability, and increased chances of bugs. However, by utilizing value objects we can effectively mitigate primitive obsession and enhance the overall quality of our code. This article explores what primitive obsession is and how value objects can be leveraged in C# to overcome this.</p> <h2 id="understanding-primitive-obsession">Understanding Primitive Obsession</h2> <p>As mentioned previously, primitive obsession occurs when programmers rely too heavily on primitive types, neglecting the creation of meaningful abstractions for domain-specific concepts. Instead of creating dedicated classes or structures, they store and manipulate data using simple types like integers or strings. While these types are essential, they lack the expressive power and encapsulation capabilities offered by custom value objects.</p> <h2 id="the-limitations-of-primitive-types">The Limitations of Primitive Types</h2> <p>Using primitive types extensively can lead to several issues. Firstly, primitive types lack semantic meaning. For instance, consider a parameter called <code class="language-plaintext highlighter-rouge">int numberOfDays</code>. It’s unclear what the purpose of this integer is without further context. Additionally, there’s no built-in validation or behavior associated with primitive types, making it easier for invalid or inconsistent data to propagate through the system. For example, if you use a string to capture an email address there are no rules in the string primitive which stop you assigning an empty string which is obviously an invalid email. Moreover, primitive types don’t encapsulate related operations and behavior, leading to scattered logic throughout the codebase.</p> <h2 id="introducing-value-objects">Introducing Value Objects</h2> <p>Value objects provide a powerful tool for combating primitive obsession. In C#, value objects are implemented using classes or structures, which encapsulate data and behavior related to a specific concept. Unlike primitive types, value objects:</p> <ul> <li>enforce invariants i.e. the integrity of the data encapsulated within a value object is guaranteed as the data must always follow the rules or conditions specified by the object</li> <li>allow us to build an object with structural equality</li> <li>build a data type provide meaningful behavior i.e. if you can’t create an object you’ll know why because we can provide meaningful errors.</li> <li>making the code more expressive and maintainable since a developers will focus less on catching edge cases in code and more on solving problems.</li> </ul> <h2 id="creating-value-objects-in-c">Creating Value Objects in C#:</h2> <p>The example below is a simple way to define a value object. I’ve created a <a href="https://github.com/thatstatsguy/til/tree/main/ValueObjects">more detailed example of this on my github repo</a> which showcases how you can achieve structural equality with value objects.</p> <p>To create a value object in C#, we can define a class or structure that represents the concept we want to model. Let’s consider an example of a value object representing a DateOfBirth:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class DateOfBirth
+{
+    private readonly DateTime _value;
+
+    public DateOfBirth(DateTime value)
+    {
+        // Add validation logic here if necessary
+        _value = value;
+    }
+
+    public int CalculateAge()
+    {
+        // Calculate the age based on the date of birth
+    }
+
+    // Add other relevant methods and properties here
+}
+</code></pre></div></div> <p>In this example, the DateOfBirth class encapsulates the concept of a person’s date of birth. It ensures that only valid dates are accepted during construction, and it provides a method to calculate the person’s age.</p> <h2 id="benefits-of-value-objects">Benefits of Value Objects</h2> <p>Using value objects offers several benefits. Firstly, the code enhances code clarity by providing self-descriptive types that represent domain concepts. Think back to the email address example, if you work with an email address type (in a code base you trust) there’s a good chance there’s at least an <code class="language-plaintext highlighter-rouge">@</code> check in the code. In terms of domain-driven design, value objects also creating a shared language between developers and domain experts.</p> <h2 id="conclusion">Conclusion</h2> <p>Primitive obsession can be a hinderance to code quality and maintainability, but value objects provide an interesting solution to the problem. By utilizing value objects in C#, we can create expressive, encapsulated, and domain-driven abstractions to solve our day to day problems while mitigating the drawbacks of primitive types. Next time you encounter primitive obsession in your C# code, consider using value objects to bring balance to the force.</p> <p>Until next time :)</p> <h2 id="further-resources">Further Resources</h2> <ul> <li><a href="https://www.youtube.com/watch?v=YbuSuSpzee4">Nick Chapsas Video on Result Types</a></li> <li><a href="https://www.youtube.com/watch?v=P5CRea21R2E">Milan Jovanović</a></li> </ul> <h2 id="additional-notes">Additional Notes</h2> <ul> <li>This article was inspired by the videos mentioned in the additional resources. A sprinkling of Chat GPT was used here an there to spice things up ;)</li> </ul>]]></content><author><name></name></author><category term="C#"/><category term="C#"/><category term="til"/><category term="PrimitiveObsession"/><category term="ValueObjects"/><summary type="html"><![CDATA[In software development, it all to easy to fall into the trap of a phenomenon called “primitive obsession”. The term refers to a coding anti-pattern where we as developers lean too heavily on primitive data types throughout our code base. For those not familiar, examples of primitives include integers, strings, or booleans. This can leading to various issues such as lack of clarity, reduced maintainability, and increased chances of bugs. However, by utilizing value objects we can effectively mitigate primitive obsession and enhance the overall quality of our code. This article explores what primitive obsession is and how value objects can be leveraged in C# to overcome this.]]></summary></entry><entry><title type="html">Updating Values in Blazor Components using Lifecycle Methods</title><link href="https://thatstatsguy.github.io/blog/2023/Updating-Blazor-Components-Using-Blazor-Lifecycle-Methods/" rel="alternate" type="text/html" title="Updating Values in Blazor Components using Lifecycle Methods"/><published>2023-05-07T00:00:00+00:00</published><updated>2023-05-07T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Updating%20Blazor%20Components%20Using%20Blazor%20Lifecycle%20Methods</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Updating-Blazor-Components-Using-Blazor-Lifecycle-Methods/"><![CDATA[<p>When starting out with Blazor, you really just want to dip your toes into water and not be buried with theory on <a href="https://learn.microsoft.com/en-us/aspnet/core/blazor/components/lifecycle?view=aspnetcore-7.0">Blazor Component Lifecycles</a>. Typically you’ll start implementing some kind of spike application to test things out, but as that starter application turns into something bigger, you may find yourself scratching your head as to why certain <a href="https://stackoverflow.com/questions/60096040/when-should-i-call-statehaschanged-and-when-blazor-automatically-intercepts-that">child components don’t see to be updating</a>. Now to be clear, I believe understanding the component lifecycle in Blazor is a must, but if you’re starting out it can be a bit much to wrap your head around to do a basic application and I find that it’s easy to fall into bad non-sustainable programming habits. Today’s article is discussing all the ways you might consider updating values in Blazor along with ways you really shouldn’t be using unless you have to!</p> <h2 id="the-example">The example</h2> <p>We’re building out an example application using the <code class="language-plaintext highlighter-rouge">dotnet new blazorserver</code> Blazor template. The idea is to place a child, grandchild and great grandchild component on the index page and see what happens when we want to pass updated values to the child components to process. In our example, we’ll be passing a “Hello Word” message to our descendant components. All code from today’s article can be found <a href="https://github.com/thatstatsguy/til/tree/main/ChildComponentRefreshing">here</a>.</p> <h2 id="baseline">Baseline</h2> <p>As a baseline, I’ve gone ahead and created the <code class="language-plaintext highlighter-rouge">BaseChild</code>, <code class="language-plaintext highlighter-rouge">BaseGrandChild</code> and <code class="language-plaintext highlighter-rouge">BaseGreatGrandChild</code> components. An example of the <code class="language-plaintext highlighter-rouge">BaseChild</code> is below.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;h6&gt;@_calculatedMessage&lt;/h6&gt;
+&lt;BaselineGrandChild Message="@Message"/&gt;
+@code {
+    
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+    
+    private string _calculatedMessage = "Child Component Value: ???";
+
+    protected override void OnInitialized()
+    {
+        _calculatedMessage = $"Child Component Value: {Message}";
+    }
+}
+</code></pre></div></div> <p>The code between the components is almost identical. The only significant difference is whether our calculated field is child, grandchild or great grandchild. Notice how in the child component we’ve set up a <code class="language-plaintext highlighter-rouge">Grandchild</code> component which uses the <code class="language-plaintext highlighter-rouge">Message</code> parameter from the <code class="language-plaintext highlighter-rouge">Child</code> component. Using the linked code, navigate to the <code class="language-plaintext highlighter-rouge">index.razor</code> file. Note the <code class="language-plaintext highlighter-rouge">ChangeValues</code> method which is the onclick event for the change values button. In the method, we’re explicitly changing the input parameter into the component as shown below.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;BaselineChild Message="@_baselineComponentMessage"&gt;&lt;/BaselineChild&gt;
+</code></pre></div></div> <p>Booting up the example application in the linked code, you’ll be able to click the <code class="language-plaintext highlighter-rouge">ChangeValues</code>, but nothing is going to happen. This is a great example of what I used to run into when starting out in Blazor. I assumed that Blazor would just automagically pick up the value and do something similar to a <code class="language-plaintext highlighter-rouge">StateHasChanged</code> method call to refresh all “downstream” components.</p> <h2 id="manual-refreshing">Manual Refreshing</h2> <p>Without knowing the component lifecycle, you may find yourself implementing your own refresh methods across all the components to handle this scenario where you want to update values in downstream components. The refresh method for a new component <code class="language-plaintext highlighter-rouge">RefreshChild</code> may look something like this.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public void Refresh(string message)
+{
+    _calculatedMessage = $"Child Component Value: {message}";
+    //trigger refreshing on downstream components
+    _refreshGrandChild.Refresh(message);
+    StateHasChanged();
+}
+</code></pre></div></div> <p>Note that you’ll need to do three things to “get this to work”:</p> <ol> <li>You’ll need to create your own refresh methods on <strong>each</strong> downstream component</li> <li>The parent of the child component will have to go and manually trigger the refresh component i.e. the child component needs to manually trigger the refresh on the grandchild and so on.</li> <li>Each component needs to call <code class="language-plaintext highlighter-rouge">StateHasChanged</code> in order to get the changes propagated to the DOM by Blazor.</li> </ol> <p>This is “OK” for a small scale application where the complexity isn’t an issue, but maintaining this sort of refreshing methodology in a larger system is a nightmare to maintain and is a bit of a code smell. It will “work” but it comes at a very high cost. Let’s have a look at how we can use the component lifecycle to assist us.</p> <h2 id="using-onparameterset">Using OnParameterSet</h2> <p>The Blazor component lifecycle has several “baked in” methods, one of which is the <code class="language-plaintext highlighter-rouge">OnParameterSet</code> method. This is automatically fired whenever a component parameter is updated. An additional benefit of this method is the <code class="language-plaintext highlighter-rouge">StateHasChanged</code> is implicitly called for you! A sample of such code is given below.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;h6&gt;@_calculatedMessage&lt;/h6&gt;
+&lt;OnParameterSetGrandChild Message="@Message"&gt;&lt;/OnParameterSetGrandChild&gt;
+@code {
+    private string _calculatedMessage = "Child Component Value: ???";
+    
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _calculatedMessage = $"Child Component Value: {Message}";
+    }
+}
+</code></pre></div></div> <p>Notice how simple our code has become. We set up the <code class="language-plaintext highlighter-rouge">OnParameterSet</code> method logic to deal with a new parameter value and that’s it! Since the value of the the <code class="language-plaintext highlighter-rouge">OnParameterSetGrandChild</code> Message parameter is bound to the Message parameter of the child component, updating the value in the child component will automatically trigger <code class="language-plaintext highlighter-rouge">OnParameterSet</code> in <code class="language-plaintext highlighter-rouge">OnParameterSetGrandChild</code>.</p> <h2 id="using-cascading-parameters">Using Cascading Parameters</h2> <p>We can take this one step further, let’s assume for a moment we need to update a value on the index page and it should automatically update the display in the <code class="language-plaintext highlighter-rouge">GreatGrandChild</code> component. Using the previous method, we’d need to propagate the <code class="language-plaintext highlighter-rouge">Message</code> parameter by defining the parameter in each of the components and manually passing it through. With <code class="language-plaintext highlighter-rouge">Cascading Parameters</code> we can bypass that and have the parameter be automatically available to all downstream components to use. The code for this in the <code class="language-plaintext highlighter-rouge">GreatGrandChild</code> component looks as follows:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;h6&gt;@_calculatedMessage&lt;/h6&gt;
+
+@code {
+    private string _calculatedMessage = "Great Grandchild Component Value: ???";
+
+    [CascadingParameter]
+    public string Message { get; set; } = string.Empty;
+
+
+    protected override void OnParametersSet()
+    {
+        _calculatedMessage = $"Great Grandchild Component Value: {Message}";
+    }
+}
+</code></pre></div></div> <p>Not a huge difference to before, but now we’re working with a <code class="language-plaintext highlighter-rouge">[CascadingParameter]</code> attribute instead of <code class="language-plaintext highlighter-rouge">[Parameter]</code>. In the index file, we define the cascading parameter “scope” as follows:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;CascadingValue Value="@_cascadingComponentMessage"&gt;
+    &lt;CascadeChild/&gt;
+&lt;/CascadingValue&gt;
+</code></pre></div></div> <p>Since we’ve defined the Cascading parameters in this way, all “downstream” components defined in <code class="language-plaintext highlighter-rouge">CascadeChild</code> will be able to use this parameter.</p> <h2 id="wrapping-up">Wrapping Up</h2> <p>To summarise the above, it can really pay dividends to read up on the lifecycle components within Blazor, it can lead to better, cleaner and more efficient code. Give it a try with your next Blazor application!</p> <p>Until next time :)</p>]]></content><author><name></name></author><category term="Blazor"/><category term="Lifecyle"/><category term="til"/><category term="Components"/><summary type="html"><![CDATA[When starting out with Blazor, you really just want to dip your toes into water and not be buried with theory on Blazor Component Lifecycles. Typically you’ll start implementing some kind of spike application to test things out, but as that starter application turns into something bigger, you may find yourself scratching your head as to why certain child components don’t see to be updating. Now to be clear, I believe understanding the component lifecycle in Blazor is a must, but if you’re starting out it can be a bit much to wrap your head around to do a basic application and I find that it’s easy to fall into bad non-sustainable programming habits. Today’s article is discussing all the ways you might consider updating values in Blazor along with ways you really shouldn’t be using unless you have to!]]></summary></entry><entry><title type="html">Mutation Testing in C#</title><link href="https://thatstatsguy.github.io/blog/2023/Mutation-Testing-in-CSharp/" rel="alternate" type="text/html" title="Mutation Testing in C#"/><published>2023-05-07T00:00:00+00:00</published><updated>2023-05-07T00:00:00+00:00</updated><id>https://thatstatsguy.github.io/blog/2023/%20Mutation%20Testing%20in%20CSharp</id><content type="html" xml:base="https://thatstatsguy.github.io/blog/2023/Mutation-Testing-in-CSharp/"><![CDATA[<p>I recently came across the concept of mutation testing in this <a href="https://www.youtube.com/watch?v=9BoKyeZapLs">webinar</a> hosted by Jetbrains. The concept of mutation testing is simple</p> <blockquote> <p>How do I assess the quality of my test suite?</p> </blockquote> <p>Your initial knee jerk reaction (like mine) was immediately to think of code coverage - heads up we were both wrong. The thing about <strong>code coverage</strong> is that it’s a tool to view <strong>what lines of code</strong> have been executed by your tests. Mutation tests do way more than than this. Among other things, mutation tests (try) help you address the following questions:</p> <ul> <li>Do I have any pointless/redundant tests in my codebase?</li> <li>Does any of my code have redundancies?</li> <li>Am I missing tests that I should be writing?</li> </ul> <p>The idea with mutation testing is to see what happens when bugs are introduced into your code. By introducing these bugs, we’re able to do a check if our tests are actually testing the right thing.</p> <p>When I say bugs, I’m referring to common things we as devs may make while doing development work i.e. making something <code class="language-plaintext highlighter-rouge">&lt;</code> instead of <code class="language-plaintext highlighter-rouge">&lt;=</code>, leaving code out that should be there etc. In mutation testing, each time we tweak code using this method we create a <strong>mutant</strong>. If our tests are any good, we expect these changes to be caught and thereby “killing” the mutant. Likewise, if this test didn’t cause our test to fail, we have mutant on our hands which has survived and needs to be investigated.</p> <h2 id="some-project-setup-with-stryker">Some Project Setup with Stryker</h2> <p>Withing the .NET ecosystem, Stryker is one library we can use to perform mutation testing. I’ve set up a <a href="https://github.com/thatstatsguy/til/tree/main/MutationTesting">test project</a> to test out mutation testing. To run this, download the files and hit <code class="language-plaintext highlighter-rouge">dotnet tool restore</code>. Alternatively go have a look at the <a href="https://stryker-mutator.io/docs/stryker-net/getting-started/">Stryker website</a>. The examples used here were heavily influenced by the above Jetbrains webinar and <a href="https://www.youtube.com/watch?v=LoFJajoJQ2g">this</a> GOTO conference presentation.</p> <p>The test project is nothing special, we have a division method along with fizzbuzz and foobar methods.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class Calculator
+{
+    public static float Divide(float number1, float number2)
+    {
+        return number1 * number2;
+    }
+}
+
+public class Fizz
+{
+    public static void Buzz(int number1)
+    {
+        if (number1 &lt;= 10)
+        {
+            throw new Exception("Test");
+        }
+
+        if (number1 &gt;= 10)
+        {
+            Foo();
+        }
+    }
+
+    private static void Foo()
+    {
+        
+    }
+}
+
+public class Foo
+{
+    int min = 999;
+
+    public int Bar(int number)
+    {
+        if (number &lt; min)
+        {
+            min = number;
+        }
+
+        return min;
+    }
+}
+</code></pre></div></div> <p>To me at least, these methods are simple enough to be self explanatory. One is a division example where we’re accidentally multiplying numbers instead of dividing. The next piece of code is a variable test to check if a number meets a criteria in order to perform some custom logic. The last bit of code is another variation on a criteria check. The tests for these are equally unimaginative:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class CalculatorShould
+{
+    
+    [Fact]
+    public void DivideTwoNumbers2()
+    {
+        var actual = Calculator.Divide(1, 1);
+        Assert.Equal(1, actual);   
+    }
+}
+
+public class FizzShould
+{
+    [Fact]
+    public void BuzzTest()
+    {
+        var exception = Assert.Throws&lt;Exception&gt;(() =&gt; Fizz.Buzz(5));
+        
+        Assert.Equal("Test", exception.Message);   
+    }
+}
+
+public class FooShould
+{
+    [Fact]
+    public void BarTest()
+    {
+        var c = new Foo();
+        var actual = c.Bar(1);
+        Assert.Equal(1, actual);   
+    }
+}
+</code></pre></div></div> <h2 id="letting-the-mutants-loose">Letting the mutants loose</h2> <p>Running the mutation tests is as simple as</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dotnet tool restore
+dotnet stryker
+</code></pre></div></div> <p>Assuming your code builds fine, stryker will now run and produced some outputs for you. Looking at the results of the html file, you will notice that we’ve got mutants surviving in all of our cases.</p> <h3 id="scenario-1---arithmetic-mutation-survived">Scenario 1 - Arithmetic Mutation Survived</h3> <p>In our calculator example, our unit test would have passed with flying colours, but our code was fundamentally flawed. The mutation tests point this out by highlighting that swapping out a multiplication for a division produced an identical result (this is known as an arithmetic mutant surviving). This highlights two potential problems:</p> <ul> <li>Our code was incorrect or</li> <li>The tests that were written suck and didn’t adequately test our code</li> </ul> <p>In this scenario, both of these turn out to be true. Changing the code and tests to make this more robust is an easy thing to do.</p> <h3 id="scenario-2---equivalent-mutants">Scenario 2 - Equivalent Mutants</h3> <p>From the report we can see that <code class="language-plaintext highlighter-rouge">if (number1 &gt;= 10)</code> is being flagged as something called an <strong>equivalent mutant</strong>. What this means is that the operator used could be changed without causing any tests to fail. What might not be obvious as first is that the mutant has highlighted redundant code. Inspecting the code a bit further, we already do a check on <code class="language-plaintext highlighter-rouge">number1</code> earlier in the code. This means that the code here is in fact redundant and can be removed safely.</p> <h3 id="scenario-3---equivalent-mutants-again">Scenario 3 - Equivalent Mutants (Again)</h3> <p>In the final bit of code, the following is being flagged as an equivalent mutant.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if (number &lt; min)
+{
+    min = number;
+}
+</code></pre></div></div> <p>The reason for this is the <code class="language-plaintext highlighter-rouge">&lt;</code> operator can be replaced with <code class="language-plaintext highlighter-rouge">&lt;=</code> without tests failing. The mutation testing here gives us an opportunity to re-express some of our code to better show our intent. In this scenario, we could just do</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>min = Math.Min(min, number);
+</code></pre></div></div> <h2 id="wrapping-up">Wrapping Up</h2> <p>To summarize what’s been mentioned above, mutation tests are a really great way to check the code you write. There are scenarios where in which it’s fine to let mutants survive, but this is a good opportunity to do a check in with your code before you accidentally release a bug out into the wild!</p> <p>Until next time :)</p> <h2 id="further-resources">Further Resources</h2> <ul> <li><a href="https://github.com/Flash0ver/F0-Talks-MutationTesting">Github Repo for mutation testing webinar</a></li> <li><a href="https://www.youtube.com/watch?v=LoFJajoJQ2g">Making Mutants Work for You</a></li> </ul>]]></content><author><name></name></author><category term="Testing"/><category term="C#"/><category term="til"/><summary type="html"><![CDATA[I recently came across the concept of mutation testing in this webinar hosted by Jetbrains. The concept of mutation testing is simple]]></summary></entry></feed>
